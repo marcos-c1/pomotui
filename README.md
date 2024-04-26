@@ -1,12 +1,10 @@
 <h1 align="center"> PomoTUI </h1>
 <p align="center">A pomodoro TUI with user notification to monitorate each pomo cycle.</p>
 
-<figure align="center">
+<p align="center">
     <img src="img/pomo.png" alt="Pomodoro logo"/>
-    <figcaption style="text-align: center;"></figcaption>
     <img src="img/timer.png" alt="Catppuccin theme"/>
-    <figcaption style="text-align: center;"><b>Pomodoro's counter</b></figcaption>
-</figure>
+</p>
 
 ### Motivation
 
