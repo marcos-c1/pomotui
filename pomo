@@ -1,0 +1,102 @@
+#!/bin/bash
+
+START_TIME=
+DELAY=
+UNTIL_TIME=
+CHECK_STATUS_RETURN=$?
+SECONDS=
+WSL=$(grep -i WSL /proc/version)
+WSL_NOTIFY_PATH=
+
+trap ctrl_c INT
+
+function ctrl_c() {
+    tput cnorm
+    exit 0
+}
+
+function countdown() {
+    START_TIME="$(date +%s)"
+
+    if [[ $? -ne 0 ]]; then
+        echo "The pomodoro script was NOT executed successfuly and returned the code $?"
+        exit $?
+    fi
+
+    local string_to_int=$(expr $1 + 0)
+
+    if [[ $? -ne 0 ]]; then
+        echo "Cannot convert the number into a string and returned the code $?"
+        exit $?
+    fi
+
+    if [[ $string_to_int > 60 ]]; then
+        local hour="$(expr $string_to_int / 60)"
+        local min="$(expr $string_to_int % 60)"
+        UNTIL_TIME="$(date -d "+${hour} hour +${min} minutes" +%s)"
+    else
+        local min="$(expr $string_to_int % 60)"
+        UNTIL_TIME="$(date -d "+${min} minutes" +%s)"
+    fi
+
+    DELAY=$(( ( $UNTIL_TIME - $START_TIME )))
+
+    local height=$(tput lines)
+    local width=$(tput cols)
+
+    tput cup "$((height/2 - 10))" "$((width/2))"
+
+    figlet -f /usr/share/figlet -f ascii12 -w $width -c "Pomodoro" 
+    sleep 2
+    clear
+    
+    local counter=0
+
+    while [ $counter -le $DELAY ]
+    do
+        local diff=$(echo $(( $DELAY - $counter )) )
+        tput cup "$((height/2 - 10))" "$((width/2))"
+        figlet -f /usr/share/figlet -f ascii12 -w $width -c $(date -u -d @${diff} +"%T")
+        sleep 1
+        clear
+        counter=$(( $counter + 1 ))
+    done
+
+    if ! [ -z $WSL_NOTIFY_PATH ]; then
+        $WSL_NOTIFY_PATH --category $WSL_DISTRO_NAME "Pomodoro break!" 
+    else 
+        notify-send -u critical $WSL_DISTRO_NAME "Pomodoro break!"
+    fi
+    tput bel
+}
+
+function check_wsl_notify_program() {
+    if ! [ -x "$(command -v wsl-notify)" ]; then
+        if ! [ "$(ls | grep -i wsl-notify-send.exe)" ]; then
+            wget -q https://github.com/stuartleeks/wsl-notify-send/releases/download/v0.1.871612270/wsl-notify-send_windows_386.zip -O "$(pwd)/wsl.zip"  1>/dev/null
+            unzip "$(pwd)/wsl.zip" 1>/dev/null
+            rm -rf $(pwd)/README.md $(pwd)/wsl.zip $(pwd)/LICENSE
+        fi
+    fi
+
+    if [[ $WSL ]]; then
+        WSL_NOTIFY_PATH="$(pwd)/wsl-notify-send.exe"
+    fi
+}
+function main() {
+    reset
+    tput civis
+    local args_qty=$#
+    if [ $args_qty -eq 1 ]; then
+        check_wsl_notify_program
+        countdown $1
+    else
+        echo "Please provide exactly one argument which refers to the \"minutes\""
+        echo "Use: pomo [minutes]"
+        echo "Where "minutes" is an integer value between 0-n"
+        echo "Executes the pomodoro timer for 30 minutes"
+    fi
+    tput cnorm
+}
+
+main $1
